@@ -1,0 +1,47 @@
+GOAL: 
+- Expose Roaster resources using Grape
+- Fewest lines of code possible to achieve that
+- Retain configurability nonetheless
+- Expose params too (useful if using something like swagger) (not sure if possible)
+- We like roasted chicken
+
+MAYBE:
+- Handle authentication and forward to Roaster for authorization
+
+Example:
+
+class API < Grape::API
+  GrapeRoaster.expose AlbumMapping
+end
+
+Equals to:
+
+class API < Grape::API
+  resource :albums do
+
+    post '/' do
+      ...
+    end
+
+    get '/' do
+      ...
+    end
+
+    route_param :album_id do
+
+      get '/' do
+        ...
+      end
+
+      put '/' do
+        ...
+      end
+  
+      delete '/' do
+        ...
+      end
+
+    end
+
+  end
+end
