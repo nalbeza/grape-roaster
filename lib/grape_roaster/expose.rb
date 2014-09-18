@@ -1,14 +1,17 @@
 # Change my (file, method) name please, i'm sad
+require 'byebug'
 
 module GrapeRoaster
 
   def self.included(base)
     base.class_eval do
       extend ClassMethods
+      helpers Helpers
     end
   end
 
   module ClassMethods
+
 
     def expose_resource(mapping, adapter_class: Roaster::Adapters::ActiveRecord)
       resource_name = mapping_to_resource_name(mapping)
@@ -52,11 +55,11 @@ module GrapeRoaster
           end
 
           namespace :links do
-            collections = mapping.representable_attrs[:definitions].to_hash
-            collections.keep_if do |name, definition|
+            collections = mapping.representable_attrs[:definitions]
+            collections.select do |_, definition|
               definition[:collection] === true
             end
-            collections.each_pair do |name, definition|
+            collections.each do |definition|
               relationship_name = definition[:as]
 
               namespace relationship_name do
@@ -98,7 +101,7 @@ module GrapeRoaster
 
               end # !namespace relationship_name
 
-            end
+            end # !route_param :id
           end # !namespace :links
 
         end
@@ -107,12 +110,15 @@ module GrapeRoaster
 
     private
 
-    def parse_id_list(raw)
-      raw.split(',')
-    end
-
     def mapping_to_resource_name(mapping)
       mapping.to_s.gsub(/Mapping$/, '').underscore.pluralize.to_sym
+    end
+
+  end # !module ClassMethods
+
+  module Helpers
+    def parse_id_list(raw)
+      raw.split(',')
     end
 
     def build_target(resource_name, resource_ids = nil, relationship_name = nil, relationship_ids = nil)
@@ -133,7 +139,6 @@ module GrapeRoaster
       res = build_request(*args)
       res.execute
     end
-
   end
 
 end
