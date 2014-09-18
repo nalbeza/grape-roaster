@@ -10,6 +10,9 @@ class Test < MiniTest::Test
 end
 
 class AlbumMapping < Roaster::Decorator
+  property :title
+
+  collection :tracks
 end
 
 class Omg < Grape::API

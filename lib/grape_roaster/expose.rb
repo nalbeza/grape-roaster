@@ -13,7 +13,6 @@ module GrapeRoaster
     def expose_resource(mapping, adapter_class: Roaster::Adapters::ActiveRecord)
       resource_name = mapping_to_resource_name(mapping)
       resource = Roaster::Resource.new(adapter_class)
-      puts "I'm exposing resource: #{mapping} => #{resource_name}"
       resource resource_name do
 
         # CREATE
@@ -33,33 +32,84 @@ module GrapeRoaster
 
           # READ
           get '/' do
-            id = params.delete(:id)
-            target = build_target(resource_name, id)
+            ids = parse_id_list(params.delete(:id))
+            target = build_target(resource_name, ids)
             exec_request(:read, target, resource)
           end
 
           # UPDATE
           put '/' do
-            id = params.delete(:id)
-            target = build_target(resource_name, id)
+            ids = parse_id_list(params.delete(:id))
+            target = build_target(resource_name, ids)
             exec_request(:update, target, resource)
           end
 
           # DELETE
           delete '/' do
-            id = params.delete(:id)
-            target = build_target(resource_name, id)
+            ids = parse_id_list(params.delete(:id))
+            target = build_target(resource_name, ids)
             exec_request(:delete, target, resource)
           end
 
           namespace :links do
-          end
+            collections = mapping.representable_attrs[:definitions].to_hash
+            collections.keep_if do |name, definition|
+              definition[:collection] === true
+            end
+            collections.each_pair do |name, definition|
+              relationship_name = definition[:as]
+
+              namespace relationship_name do
+                get '/' do
+                  ids = parse_id_list(params.delete(:id))
+                  target = build_target(resource_name, ids, relationship_name)
+                  exec_request(:read, target, resource)
+                end
+
+                post '/' do
+                  ids = parse_id_list(params.delete(:id))
+                  target = build_target(resource_name, ids, relationship_name)
+                  exec_request(:create, target, resource)
+                end
+
+                delete '/' do
+                  ids = parse_id_list(params.delete(:id))
+                  target = build_target(resource_name, ids, relationship_name)
+                  exec_request(:delete, target, resource)
+                end
+
+                route_param :rel_ids do
+
+                  post '/' do
+                    ids = parse_id_list(params.delete(:id))
+                    rel_ids = parse_id_list(params.delete(:rel_ids))
+                    target = build_target(resource_name, ids, relationship_name)
+                    exec_request(:create, target, resource)
+                  end
+
+                  delete '/' do
+                    ids = parse_id_list(params.delete(:id))
+                    rel_ids = parse_id_list(params.delete(:rel_ids))
+                    target = build_target(resource_name, ids, relationship_name)
+                    exec_request(:delete, target, resource)
+                  end
+
+                end # !route_param
+
+              end # !namespace relationship_name
+
+            end
+          end # !namespace :links
 
         end
       end
     end
 
     private
+
+    def parse_id_list(raw)
+      raw.split(',')
+    end
 
     def mapping_to_resource_name(mapping)
       mapping.to_s.gsub(/Mapping$/, '').underscore.pluralize.to_sym
