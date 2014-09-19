@@ -79,6 +79,20 @@ module Test
 
     include GrapeRoaster
     
-    expose_resource AlbumMapping
+    expose_resource AlbumMapping,
+      adapter_class: Roaster::Adapters::ActiveRecord, 
+      endpoints: {
+      }
   end
 end
+
+def print_routes(api_class)
+  api_class.routes.each do |route|
+    info = route.instance_variable_get :@options
+    description = "%-40s..." % info[:description][0..39] if info[:description]
+    method = "%-7s" % info[:method]
+    puts "#{description}  #{method}#{info[:path]}"
+  end
+end
+
+puts print_routes(Test::API)

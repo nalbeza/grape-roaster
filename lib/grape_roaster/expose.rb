@@ -7,102 +7,151 @@ module GrapeRoaster
     base.class_eval do
       extend ClassMethods
       helpers Helpers
+      include DSL
     end
+  end
+
+  module DSL
+
+    def self.included(base)
+      base.extend Methods
+    end
+
+    class TargetBuilder
+      attr_accessor :resource_name
+      attr_accessor :resource_ids_key
+      attr_accessor :relationship_name
+      attr_accessor :relationship_ids_key
+
+      def initialize(resource_name)
+        @resource_name = resource_name
+      end
+
+      def parse_id_list(raw)
+        raw.split(',')
+      end
+
+      def build(params)
+        args = [@resource_name]
+        args.push parse_id_list(params[resource_ids_key]) if resource_ids_key
+        args.push relationship_name if relationship_name
+        args.push parse_id_list(params[relationship_ids_key]) if relationship_ids_key
+        Roaster::Query::Target.new(*args)
+      end
+    end
+
+    module Methods
+
+      METHOD_MAP = {
+        post: :create,
+        get: :read,
+        put: :update,
+        delete: :delete
+      }
+
+      cattr_accessor :target_builders
+      cattr_accessor :adapter_resource
+
+      def self.extended(base)
+        base.target_builders = []
+      end
+
+      def scoped_builder(builder, &block)
+        target_builders.push builder
+        block.yield
+        target_builders.pop
+      end
+
+      def dup_last_builder
+        builder = target_builders.last || raise('No target builder available !')
+        builder.dup
+      end
+
+      def resource(name, &block)
+        scoped_builder TargetBuilder.new(name) do
+          super(name, &block)
+        end
+      end
+
+      def resource_id_param(name, &block)
+        builder = dup_last_builder
+        builder.resource_ids_key = name
+        scoped_builder builder do
+          route_param(name, &block)
+        end
+      end
+
+      def relationship(name, &block)
+        builder = dup_last_builder
+        builder.relationship_name = name
+        scoped_builder builder do
+          namespace(name, &block)
+        end
+      end
+
+      def relationship_id_param(name, &block)
+        builder = dup_last_builder
+        builder.relationship_ids_key = name
+        scoped_builder builder do
+          route_param(name, &block)
+        end
+      end
+
+      def create_route(method, path: '/', adapter_resource: nil)
+        roaster_method = METHOD_MAP[method] || raise("Invalid method: #{method}")
+        ares = adapter_resource || self.adapter_resource
+        builder = target_builders.last
+        send(method, path) do
+          target = builder.build(params)
+          exec_request(roaster_method, target, ares)
+        end
+      end
+
+    end
+
   end
 
   module ClassMethods
 
-
-    def expose_resource(mapping, adapter_class: Roaster::Adapters::ActiveRecord)
+    def expose_resource(mapping,
+                        adapter_class: Roaster::Adapters::ActiveRecord,
+                        endpoints: {})
       resource_name = mapping_to_resource_name(mapping)
-      resource = Roaster::Resource.new(adapter_class)
+      self.adapter_resource = Roaster::Resource.new(adapter_class)
       resource resource_name do
 
-        # CREATE
-        post '/' do
-          target = build_target(resource_name)
-          exec_request(:create, target, resource)
-        end
-
-        # READ
-        get '/' do
-          target = build_target(resource_name)
-          exec_request(:read, target, resource)
-        end
+        create_route(:post)
+        create_route(:get)
 
         #TODO: Use a real id name ( #{resource_name}_id )
-        route_param :id do
+        resource_id_param :resource_id do
 
-          # READ
-          get '/' do
-            ids = parse_id_list(params.delete(:id))
-            target = build_target(resource_name, ids)
-            exec_request(:read, target, resource)
-          end
-
-          # UPDATE
-          put '/' do
-            ids = parse_id_list(params.delete(:id))
-            target = build_target(resource_name, ids)
-            exec_request(:update, target, resource)
-          end
-
-          # DELETE
-          delete '/' do
-            ids = parse_id_list(params.delete(:id))
-            target = build_target(resource_name, ids)
-            exec_request(:delete, target, resource)
-          end
+          create_route(:get)
+          create_route(:put)
+          create_route(:delete)
 
           namespace :links do
-            collections = mapping.representable_attrs[:definitions]
-            collections.select do |_, definition|
-              definition[:collection] === true
+
+            defs = mapping.representable_attrs[:definitions]
+            defs = defs.values.select { |_def| _def[:collection] === true }
+            defs.each do |definition|
+              relationship_name = definition[:as].evaluate(nil).to_sym
+
+              relationship relationship_name do
+
+                create_route(:get)
+                create_route(:post)
+                create_route(:delete)
+
+                relationship_id_param :rel_ids do
+                  create_route(:post)
+                  create_route(:delete)
+                end
+
+              end
+
             end
-            collections.each do |definition|
-              relationship_name = definition[:as]
-
-              namespace relationship_name do
-                get '/' do
-                  ids = parse_id_list(params.delete(:id))
-                  target = build_target(resource_name, ids, relationship_name)
-                  exec_request(:read, target, resource)
-                end
-
-                post '/' do
-                  ids = parse_id_list(params.delete(:id))
-                  target = build_target(resource_name, ids, relationship_name)
-                  exec_request(:create, target, resource)
-                end
-
-                delete '/' do
-                  ids = parse_id_list(params.delete(:id))
-                  target = build_target(resource_name, ids, relationship_name)
-                  exec_request(:delete, target, resource)
-                end
-
-                route_param :rel_ids do
-
-                  post '/' do
-                    ids = parse_id_list(params.delete(:id))
-                    rel_ids = parse_id_list(params.delete(:rel_ids))
-                    target = build_target(resource_name, ids, relationship_name)
-                    exec_request(:create, target, resource)
-                  end
-
-                  delete '/' do
-                    ids = parse_id_list(params.delete(:id))
-                    rel_ids = parse_id_list(params.delete(:rel_ids))
-                    target = build_target(resource_name, ids, relationship_name)
-                    exec_request(:delete, target, resource)
-                  end
-
-                end # !route_param
-
-              end # !namespace relationship_name
-
-            end # !route_param :id
-          end # !namespace :links
+          end
 
         end
       end
@@ -117,13 +166,6 @@ module GrapeRoaster
   end # !module ClassMethods
 
   module Helpers
-    def parse_id_list(raw)
-      raw.split(',')
-    end
-
-    def build_target(resource_name, resource_ids = nil, relationship_name = nil, relationship_ids = nil)
-      Roaster::Query::Target.new(resource_name, resource_ids, relationship_name, relationship_ids)
-    end
 
     def build_request(operation, target, resource)
       params = env['rack.request.query_hash']
