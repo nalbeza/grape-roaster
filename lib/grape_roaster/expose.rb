@@ -24,6 +24,10 @@ module GrapeRoaster
       attr_accessor :relationship_ids_key
       attr_accessor :config
 
+      def config=(config)
+        @config = config || {}
+      end
+
       def initialize(resource_name, config: {})
         @resource_name = resource_name
         @config = config
