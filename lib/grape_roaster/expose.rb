@@ -22,13 +22,41 @@ module GrapeRoaster
       attr_accessor :resource_ids_key
       attr_accessor :relationship_name
       attr_accessor :relationship_ids_key
+      attr_accessor :config
 
-      def initialize(resource_name)
+      def initialize(resource_name, config: {})
         @resource_name = resource_name
+        @config = config
       end
 
       def parse_id_list(raw)
         raw.split(',')
+      end
+
+      def allowed_route?(method)
+        without = Array(config[:without])
+        !without.include?(method)
+      end
+
+      def dup_for_resource_id_param(name)
+        builder = self.dup
+        builder.config = self.config[:id_scope]
+        builder.resource_ids_key = name
+        builder
+      end
+
+      def dup_for_relationship(name)
+        builder = self.dup
+        builder.config = self.config[name]
+        builder.relationship_name = name
+        builder
+      end
+
+      def dup_for_relationship_id_param(name)
+        builder = self.dup
+        builder.config = self.config[:id_scope]
+        builder.relationship_ids_key = name
+        builder
       end
 
       def build(params)
@@ -56,51 +84,48 @@ module GrapeRoaster
         base.target_builders = []
       end
 
-      def scoped_builder(builder, &block)
+      def builder_scope(builder, &block)
         target_builders.push builder
         block.yield
         target_builders.pop
       end
 
-      def dup_last_builder
-        builder = target_builders.last || raise('No target builder available !')
-        builder.dup
+      def last_builder
+        target_builders.last || raise('No target builder available !')
       end
 
-      def resource(name, &block)
-        scoped_builder TargetBuilder.new(name) do
+      def resource(name, config: {}, &block)
+        builder_scope TargetBuilder.new(name, config: config) do
           super(name, &block)
         end
       end
 
       def resource_id_param(name, &block)
-        builder = dup_last_builder
-        builder.resource_ids_key = name
-        scoped_builder builder do
+        builder = last_builder.dup_for_resource_id_param(name)
+        builder_scope builder do
           route_param(name, &block)
         end
       end
 
       def relationship(name, &block)
-        builder = dup_last_builder
-        builder.relationship_name = name
-        scoped_builder builder do
+        builder = last_builder.dup_for_relationship(name)
+        builder_scope builder do
           namespace(name, &block)
         end
       end
 
       def relationship_id_param(name, &block)
-        builder = dup_last_builder
-        builder.relationship_ids_key = name
-        scoped_builder builder do
+        builder = last_builder.dup_for_relationship_id_param(name)
+        builder_scope builder do
           route_param(name, &block)
         end
       end
 
       def create_route(method, path: '/', adapter_resource: nil)
+        builder = target_builders.last
+        return unless builder.allowed_route?(method)
         roaster_method = METHOD_MAP[method] || raise("Invalid method: #{method}")
         ares = adapter_resource || self.adapter_resource
-        builder = target_builders.last
         send(method, path) do
           target = builder.build(params)
           exec_request(roaster_method, target, ares)
@@ -115,10 +140,10 @@ module GrapeRoaster
 
     def expose_resource(mapping,
                         adapter_class: Roaster::Adapters::ActiveRecord,
-                        methods: {})
+                        config: {})
       resource_name = mapping_to_resource_name(mapping)
       self.adapter_resource = Roaster::Resource.new(adapter_class)
-      resource resource_name do
+      resource resource_name, config: config do
 
         create_route(:post)
         create_route(:get)

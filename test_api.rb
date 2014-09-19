@@ -81,19 +81,19 @@ module Test
     
     expose_resource AlbumMapping,
       adapter_class: Roaster::Adapters::ActiveRecord,
-      without: [
-        :get,
-        id_scope: [
-          :delete,
-          tracks: [
-            :post,
-            id_scope: [
-              :delete
-            ]
-          ],
+      config: {
+        without: :get,
+        id_scope: {
+          without: [:delete, :put],
+          tracks: {
+            without: :post,
+            id_scope: {
+              without: :delete
+            }
+          },
           band: false
-        ]
-      ]
+        }
+      }
   end
 end
 
