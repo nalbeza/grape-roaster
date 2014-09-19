@@ -80,14 +80,18 @@ module Test
     include GrapeRoaster
     
     expose_resource AlbumMapping,
-      adapter_class: Roaster::Adapters::ActiveRecord, 
-      methods: [
-        :get, :post,
-        resource: [
-          :get, :put, :delete,
+      adapter_class: Roaster::Adapters::ActiveRecord,
+      without: [
+        :get,
+        id_scope: [
+          :delete,
           tracks: [
-            :post, :delete
-          ]
+            :post,
+            id_scope: [
+              :delete
+            ]
+          ],
+          band: false
         ]
       ]
   end
