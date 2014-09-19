@@ -81,8 +81,15 @@ module Test
     
     expose_resource AlbumMapping,
       adapter_class: Roaster::Adapters::ActiveRecord, 
-      endpoints: {
-      }
+      methods: [
+        :get, :post,
+        resource: [
+          :get, :put, :delete,
+          tracks: [
+            :post, :delete
+          ]
+        ]
+      ]
   end
 end
 

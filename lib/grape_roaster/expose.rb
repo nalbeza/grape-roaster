@@ -115,7 +115,7 @@ module GrapeRoaster
 
     def expose_resource(mapping,
                         adapter_class: Roaster::Adapters::ActiveRecord,
-                        endpoints: {})
+                        methods: {})
       resource_name = mapping_to_resource_name(mapping)
       self.adapter_resource = Roaster::Resource.new(adapter_class)
       resource resource_name do
