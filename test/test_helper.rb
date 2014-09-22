@@ -18,16 +18,18 @@ class MiniTest::Test
 
   include Rack::Test::Methods
 
-  def method_missing(meth, *args, &block)
-    if meth.to_s =~ /^json_(.+)$/
-      res = self.send($1, *args, &block)
+  HTTP_METHODS = [:get, :post, :put, :patch, :delete, :options, :head]
+
+  HTTP_METHODS.each do |meth|
+    define_method("json_#{meth}") do |uri, params = {}, env = {}, &block|
+      env['CONTENT_TYPE'] = 'application/vnd.api+json' if [:post, :put, :patch].include?(meth)
+      env['ACCEPT'] = 'application/vnd.api+json'
+      res = send(meth, uri, params, env, &block)
       class << res
         attr_accessor :json_body
       end
       res.json_body = JSON.parse(res.body)
       res
-    else
-      super
     end
   end
 
