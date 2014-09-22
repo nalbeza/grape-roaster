@@ -1,19 +1,10 @@
-require 'grape-roaster'
-require 'minitest/autorun'
 require_relative 'test_helper'
 
-class Test < MiniTest::Test
+class SongVaultApiTest < MiniTest::Test
 
   def test_wut
+    res = get '/v1/albums'
+    ap JSON.parse(res.body)
   end
-
-end
-
-
-class Omg < Grape::API
-
-#  include GrapeRoaster
-
-#  expose_resource AlbumMapping
 
 end
