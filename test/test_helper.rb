@@ -23,12 +23,12 @@ class MiniTest::Test
   HTTP_METHODS.each do |meth|
     define_method("json_#{meth}") do |uri, params = {}, env = {}, &block|
       env['CONTENT_TYPE'] = 'application/vnd.api+json' if [:post, :put, :patch].include?(meth)
-      env['ACCEPT'] = 'application/vnd.api+json'
+      env['ACCEPT'] = 'application/vnd.api+json' unless meth == :delete
       res = send(meth, uri, params, env, &block)
       class << res
         attr_accessor :json_body
       end
-      res.json_body = JSON.parse(res.body)
+      res.json_body = res.body.empty? ? nil : JSON.parse(res.body) rescue byebug
       res
     end
   end

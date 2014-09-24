@@ -16,7 +16,7 @@ Gem::Specification.new do |gem|
   gem.require_paths = ['lib']
   gem.version       = GrapeRoaster::VERSION
 
-  gem.add_runtime_dependency 'roaster', '~> 0.0.4'
+  #gem.add_runtime_dependency 'roaster', '~> 0.0.6'
   gem.add_runtime_dependency 'grape'
 
   gem.add_development_dependency "activerecord", "~> 4.1"

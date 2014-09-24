@@ -13,7 +13,7 @@ end
 ActiveRecord::Migration.class_eval do
   create_table :tracks do |t|
     t.string  :title
-    t.string  :index
+    t.integer  :index
     t.belongs_to :album
   end
 end

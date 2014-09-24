@@ -132,7 +132,13 @@ module GrapeRoaster
         ares = adapter_resource || self.adapter_resource
         send(method, path) do
           target = builder.build(params)
-          exec_request(roaster_method, target, ares)
+          exec_request(roaster_method, target, ares).tap do |res|
+            case method
+            when :delete
+              status 204
+            end
+            status 204 if res.nil?
+          end
         end
       end
 
@@ -161,12 +167,9 @@ module GrapeRoaster
 
           namespace :links do
 
-            defs = mapping.representable_attrs[:definitions]
-            defs = defs.values.select { |_def| _def[:collection] === true }
-            defs.each do |definition|
-              relationship_name = definition[:as].evaluate(nil).to_sym
-
-              relationship relationship_name do
+            rels = mapping.representable_attrs.values_at(:_has_many, :_has_one).flatten
+            rels.each do |rel|
+              relationship rel[:name].to_sym do
 
                 create_route(:get)
                 create_route(:post)

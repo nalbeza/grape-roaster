@@ -4,6 +4,7 @@ module SongVault
   class API < Grape::API
     version 'v1', using: :path
     format :json
+    content_type :json, 'application/vnd.api+json'
 
     include GrapeRoaster
 
