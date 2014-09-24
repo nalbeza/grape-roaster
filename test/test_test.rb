@@ -49,28 +49,9 @@ class SongVaultApiTest < MiniTest::Test
         }
       }
     }
-    pattern = {
-      links: {
-        'albums.band' => %r'/bands/{albums.band}\Z'
-      },
-      albums: {
-        id: String,
-        title: 'Animals',
-        links: {
-          band: band.id.to_s,
-          tracks: []
-        }
-      },
-      linked: {
-        bands: [{
-          id: band.id.to_s,
-          name: band.name
-        }]
-      }
-    }
     res = json_put '/v1/albums/1', JSON.generate(album)
+    assert_empty res.body
     assert_equal 204, res.status
-    assert_json_match pattern, res.json_body
   end
 
   def test_update_to_many_relationship
@@ -83,34 +64,10 @@ class SongVaultApiTest < MiniTest::Test
         }
       }
     }
-    pattern = {
-      links: {
-        'albums.band' => %r'/bands/{albums.band}\Z'
-      },
-      albums: {
-        id: String,
-        title: 'Animals',
-        links: {
-          band: nil,
-          tracks: track_ids
-        }
-      },
-      linked: {
-        tracks: [
-          {
-            id: tracks[0].id,
-            title: tracks[0].title
-          },
-          {
-            id: tracks[1].id,
-            title: tracks[1].title
-          }
-        ]
-      }
-    }
+
     res = json_put '/v1/albums/1', JSON.generate(album)
     assert_equal 204, res.status
-    assert_json_match pattern, res.json_body
+    assert_empty res.body
   end
 
   def test_get_to_one_relationship

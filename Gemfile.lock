@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/pause/roaster.git
-  revision: 062f494c604b941743fb12f4d21d3b7fce317133
+  revision: e4a5f91af46de4325aceb20db47ab06f5d9f7729
   specs:
     roaster (0.0.6)
       activerecord (~> 4.1)
