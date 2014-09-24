@@ -168,4 +168,10 @@ class SongVaultApiTest < MiniTest::Test
     assert_equal 200, res.status
     assert_json_match pattern, res.json_body
   end
+
+  def test_404
+    res = json_get "/v1/albums/#{SecureRandom.hex}"
+    assert_equal 404, res.status
+  end
+
 end

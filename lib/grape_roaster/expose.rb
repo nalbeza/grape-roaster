@@ -132,8 +132,14 @@ module GrapeRoaster
         ares = adapter_resource || self.adapter_resource
         send(method, path) do
           target = builder.build(params)
-          exec_request(roaster_method, target, ares).tap do |res|
-            status 204 if res.nil?
+          begin
+            exec_request(roaster_method, target, ares).tap do |res|
+              status 204 if res.nil?
+            end
+          rescue Roaster::ResourceNotFoundError
+            status 404
+            #TODO: Make error handling a bit more verbose =)
+            {error: {}}
           end
         end
       end
