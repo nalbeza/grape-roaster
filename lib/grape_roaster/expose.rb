@@ -133,10 +133,6 @@ module GrapeRoaster
         send(method, path) do
           target = builder.build(params)
           exec_request(roaster_method, target, ares).tap do |res|
-            case method
-            when :delete
-              status 204
-            end
             status 204 if res.nil?
           end
         end
