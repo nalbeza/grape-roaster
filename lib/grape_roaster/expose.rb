@@ -164,7 +164,7 @@ module GrapeRoaster
 
           namespace :links do
 
-            rels = mapping.representable_attrs.values_at(:_has_many, :_has_one).flatten
+            rels = mapping.representable_attrs.values_at(:_has_many, :_has_one).flatten.compact
             rels.each do |rel|
               relationship rel[:name].to_sym do
 
