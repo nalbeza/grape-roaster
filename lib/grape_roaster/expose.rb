@@ -153,9 +153,10 @@ module GrapeRoaster
     def expose_resource(mapping,
                         adapter_class: Roaster::Adapters::ActiveRecord,
                         model_class: nil,
+                        scope: nil,
                         config: {})
       resource_name = mapping_to_resource_name(mapping)
-      self.adapter_resource = Roaster::Resource.new(adapter_class, model_class: model_class)
+      self.adapter_resource = Roaster::Resource.new(adapter_class, model_class: model_class, scope: scope)
       resource resource_name, config: config do
 
         create_route(:post)
@@ -209,7 +210,8 @@ module GrapeRoaster
                            target,
                            resource,
                            params,
-                           document: document)
+                           document: document,
+                           api_key: env['REMOTE_USER'])
     end
 
     def exec_request(*args)
