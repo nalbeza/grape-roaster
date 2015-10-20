@@ -1,6 +1,6 @@
 # -*- encoding: utf-8 -*-
 require File.expand_path('../lib/grape_roaster/version', __FILE__)
- 
+
 Gem::Specification.new do |gem|
   gem.name          = 'grape-roaster'
   gem.authors       = ['Nicolas Albeza', 'Jérémy Lecerf']
@@ -9,7 +9,7 @@ Gem::Specification.new do |gem|
   gem.summary       = %q{And this}
   gem.homepage      = 'https://github.com/pause/grape-roaster'
   gem.license       = 'MIT'
- 
+
   gem.files         = `git ls-files`.split($\)
   gem.executables   = gem.files.grep(%r{^bin/}).map{ |f| File.basename(f) }
   gem.test_files    = gem.files.grep(%r{^(test|spec|features)/})

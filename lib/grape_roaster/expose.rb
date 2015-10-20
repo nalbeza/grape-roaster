@@ -125,7 +125,7 @@ module GrapeRoaster
         end
       end
 
-      def create_route(method, path: '/', adapter_resource: nil)
+      def create_route(method, path: '/', adapter_resource: nil, root_url: nil)
         builder = target_builders.last
         return unless builder.allowed_route?(method)
         roaster_method = METHOD_MAP[method] || raise("Invalid method: #{method}")
@@ -133,7 +133,7 @@ module GrapeRoaster
         send(method, path) do
           target = builder.build(params)
           begin
-            exec_request(roaster_method, target, ares).tap do |res|
+            exec_request(roaster_method, target, ares, root_url: root_url).tap do |res|
               status 204 if res.nil?
             end
           rescue Roaster::ResourceNotFoundError
@@ -150,6 +150,10 @@ module GrapeRoaster
 
   module ClassMethods
 
+    def roaster_root_url(root_url)
+      @root_url = root_url
+    end
+
     def expose_resource(mapping,
                         adapter_class: Roaster::Adapters::ActiveRecord,
                         model_class: nil,
@@ -159,15 +163,15 @@ module GrapeRoaster
       self.adapter_resource = Roaster::Resource.new(adapter_class, model_class: model_class, scope: scope)
       resource resource_name, config: config do
 
-        create_route(:post)
-        create_route(:get)
+        create_route(:post, root_url: @root_url)
+        create_route(:get, root_url: @root_url)
 
         #TODO: Use a real id name ( #{resource_name}_id )
         resource_id_param :resource_id do
 
-          create_route(:get)
-          create_route(:put)
-          create_route(:delete)
+          create_route(:get, root_url: @root_url)
+          create_route(:put, root_url: @root_url)
+          create_route(:delete, root_url: @root_url)
 
           namespace :links do
 
@@ -175,13 +179,13 @@ module GrapeRoaster
             rels.each do |rel|
               relationship rel[:name].to_sym do
 
-                create_route(:get)
-                create_route(:post)
-                create_route(:delete)
+                create_route(:get, root_url: @root_url)
+                create_route(:post, root_url: @root_url)
+                create_route(:delete, root_url: @root_url)
 
                 relationship_id_param :rel_ids do
-                  create_route(:post)
-                  create_route(:delete)
+                  create_route(:post, root_url: @root_url)
+                  create_route(:delete, root_url: @root_url)
                 end
 
               end
@@ -203,13 +207,14 @@ module GrapeRoaster
 
   module Helpers
 
-    def build_request(operation, target, resource)
+    def build_request(operation, target, resource, root_url: nil)
       params = env['rack.request.query_hash']
       document = env['api.request.body']
       Roaster::Request.new(operation,
                            target,
                            resource,
                            params,
+                           root_url: root_url,
                            document: document,
                            api_key: env['REMOTE_USER'])
     end
